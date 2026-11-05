@@ -1,0 +1,22 @@
+# Local development profile.
+# Activate with: --spring.profiles.active=local
+# Expects the docker-compose PostgreSQL from the repository root to be running.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/testimonial}
+    username: ${SPRING_DATASOURCE_USERNAME:testimonial}
+    password: ${SPRING_DATASOURCE_PASSWORD:testimonial}
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+
+logging:
+  level:
+    com.yamin.testimonial: DEBUG
+    org.springframework.security: INFO

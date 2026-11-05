@@ -1,0 +1,6 @@
+-- Flyway migrations live in this directory.
+-- Naming convention: V<version>__<description>.sql
+-- Example:  V1__create_users_table.sql
+--
+-- Data modeling is intentionally deferred; this file keeps the directory
+-- present in version control so Flyway's configured location resolves.

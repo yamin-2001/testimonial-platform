@@ -1,0 +1,94 @@
+spring:
+  application:
+    name: testimonial
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/testimonial}
+    username: ${SPRING_DATASOURCE_USERNAME:testimonial}
+    password: ${SPRING_DATASOURCE_PASSWORD:testimonial}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema (PRD 8). Hibernate only validates that the
+      # entities match what Flyway already applied.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
+    from: ${MAIL_FROM_ADDRESS:no-reply@example.com}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            # Placeholder defaults keep the application context bootable when
+            # Google credentials are absent (CI, tests, public endpoints).
+            # Set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in the environment
+            # to enable Google sign-in for real.
+            client-id: ${GOOGLE_CLIENT_ID:placeholder-not-configured}
+            client-secret: ${GOOGLE_CLIENT_SECRET:placeholder-not-configured}
+            scope:
+              - openid
+              - profile
+              - email
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=60s
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+
+app:
+  public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  turnstile:
+    secret-key: ${TURNSTILE_SECRET_KEY:}
+    verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.yamin.testimonial: ${LOG_LEVEL:INFO}

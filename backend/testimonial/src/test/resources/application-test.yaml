@@ -1,0 +1,43 @@
+# Test profile. The contextLoads test and any slice tests use this.
+# Integration tests that need a real PostgreSQL should use Testcontainers
+# (see src/test/java/.../support/PostgresTestContainer) and override the
+# datasource with @DynamicPropertySource.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  # No outbound email during tests.
+  mail:
+    host: localhost
+    port: 3025
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope:
+              - openid
+              - profile
+              - email
+
+app:
+  stripe:
+    secret-key: sk_test_dummy
+    publishable-key: pk_test_dummy
+    webhook-secret: whsec_test_dummy
+  turnstile:
+    secret-key: test-turnstile-secret
+
+logging:
+  level:
+    com.yamin.testimonial: INFO
+    org.springframework.security: WARN
