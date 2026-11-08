@@ -3,6 +3,7 @@ package com.yamin.testimonial.common.exception;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.yamin.testimonial.spaces.PlanLimitException;
+import com.yamin.testimonial.testimonials.RateLimitException;
 
 /**
  * Turns exceptions into the error shape the frontend expects.
@@ -67,6 +69,19 @@ public class GlobalExceptionHandler {
 		body.put("limit", e.getLimit());
 		body.put("plan", e.getPlan().name());
 		return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+	}
+
+	/**
+	 * A submitter that has made too many requests in a short time.
+	 *
+	 * <p>429, with a {@code Retry-After} header saying how long to wait
+	 * (PRD 4.5).
+	 */
+	@ExceptionHandler(RateLimitException.class)
+	public ResponseEntity<Map<String, Object>> handleRateLimitException(RateLimitException e) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.header(HttpHeaders.RETRY_AFTER, Long.toString(e.getRetryAfterSeconds()))
+				.body(body(e.getMessage()));
 	}
 
 	/**

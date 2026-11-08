@@ -64,4 +64,19 @@ public interface SpaceRepository extends JpaRepository<Space, UUID> {
 			where t.space.id = :spaceId
 			""")
 	long countTestimonials(@Param("spaceId") UUID spaceId);
+
+	/**
+	 * Finds a Space by its slug and locks the row for the rest of the
+	 * transaction.
+	 *
+	 * <p>The lock is what makes the per-Space testimonial limit hold under
+	 * concurrent submissions. Counting and then inserting without a lock is a
+	 * race: two submissions can both read a count below the limit and both
+	 * insert, taking the Space one over the limit (PRD 4.9).
+	 *
+	 * <p>Locking the Space row serialises the submissions for that Space. The
+	 * lock is released when the transaction ends.
+	 */
+	@Query(value = "select * from spaces where slug = :slug for update", nativeQuery = true)
+	Optional<Space> findBySlugForUpdate(@Param("slug") String slug);
 }

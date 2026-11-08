@@ -96,6 +96,16 @@ app:
   turnstile:
     secret-key: ${TURNSTILE_SECRET_KEY:}
     verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+  submission:
+    # Public testimonial submissions are rate limited per IP address
+    # (PRD 4.5). The browser test suite shares one IP, so the local
+    # development backend is usually run with a raised capacity.
+    rate-limit-capacity: ${SUBMISSION_RATE_LIMIT_CAPACITY:5}
+    rate-limit-refill-seconds: ${SUBMISSION_RATE_LIMIT_REFILL_SECONDS:10}
+    # Off by default: without a proxy in front, X-Forwarded-For is
+    # client-supplied and could be used to forge a rate-limit key.
+    trust-proxy: ${SUBMISSION_TRUST_PROXY:false}
+    honeypot-field: companyWebsite
 
 springdoc:
   swagger-ui:

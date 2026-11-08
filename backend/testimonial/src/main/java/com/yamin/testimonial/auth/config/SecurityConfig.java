@@ -60,6 +60,10 @@ public class SecurityConfig {
 								"/api/auth/forgot-password", "/api/auth/reset-password",
 								"/api/auth/verify-email")
 						.permitAll()
+						// Public: a Space's submission page and its form.
+						// Submitters never authenticate (PRD 6.4).
+						.requestMatchers("/api/public/**")
+						.permitAll()
 						// The Google OAuth2 flow: the redirect to Google's consent
 						// screen and the callback that returns with the code.
 						.requestMatchers("/oauth2/**", "/login/**").permitAll()

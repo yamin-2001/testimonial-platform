@@ -35,7 +35,10 @@ app:
     publishable-key: pk_test_dummy
     webhook-secret: whsec_test_dummy
   turnstile:
-    secret-key: test-turnstile-secret
+    # Blank on purpose. A non-blank secret would make every submission test
+    # call Cloudflare for real. The CAPTCHA path is proved by its own test,
+    # which sets a secret and stubs the verification.
+    secret-key: ""
   mail:
     # On, so that MailService takes the sending path and the recording sender
     # captures the messages. Off, it would only write them to the log.
