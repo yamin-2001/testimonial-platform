@@ -9,6 +9,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.yamin.testimonial.spaces.PlanLimitException;
+
 /**
  * Turns exceptions into the error shape the frontend expects.
  *
@@ -39,6 +41,44 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<Map<String, Object>> handleConflictException(ConflictException e) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 				.body(body(e.getMessage()));
+	}
+
+	/**
+	 * Something the caller asked for does not exist.
+	 *
+	 * <p>404. Also used for another user's Space, so the response does not
+	 * reveal that it exists (PRD 4.2, 8).
+	 */
+	@ExceptionHandler(NotFoundException.class)
+	public ResponseEntity<Map<String, Object>> handleNotFoundException(NotFoundException e) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(body(e.getMessage()));
+	}
+
+	/**
+	 * A request that would exceed the user's plan limit.
+	 *
+	 * <p>409, with the limit included so the UI can prompt an upgrade
+	 * (PRD 4.2).
+	 */
+	@ExceptionHandler(PlanLimitException.class)
+	public ResponseEntity<Map<String, Object>> handlePlanLimitException(PlanLimitException e) {
+		Map<String, Object> body = body(e.getMessage());
+		body.put("limit", e.getLimit());
+		body.put("plan", e.getPlan().name());
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+	}
+
+	/**
+	 * A request whose values are not acceptable.
+	 *
+	 * <p>400, with one message per offending field.
+	 */
+	@ExceptionHandler(ValidationException.class)
+	public ResponseEntity<Map<String, Object>> handleServiceValidationException(ValidationException e) {
+		Map<String, Object> body = body(e.getMessage());
+		body.put("errors", e.getFieldErrors());
+		return ResponseEntity.badRequest().body(body);
 	}
 
 	/**

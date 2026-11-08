@@ -84,6 +84,14 @@ public interface TestimonialRepository extends JpaRepository<Testimonial, UUID> 
 	long countBySpaceId(UUID spaceId);
 
 	/**
+	 * Counts every testimonial across a user's Spaces.
+	 *
+	 * <p>Used for the dashboard's total (PRD 4.6). Deleted testimonials are
+	 * gone from the table entirely, so they are excluded automatically.
+	 */
+	long countBySpaceOwnerId(UUID ownerId);
+
+	/**
 	 * Counts distinct submitter emails across a user's Spaces.
 	 *
 	 * <p>Unique submitters for the dashboard (PRD 4.6). Distinct emails are

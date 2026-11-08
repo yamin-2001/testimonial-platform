@@ -20,8 +20,8 @@ next-env.d.ts
 
 # ---- Test output ----
 coverage/
-/playwright-report/
-/test-results/
+playwright-report/
+test-results/
 
 # ---- Editors / OS ----
 .idea/
