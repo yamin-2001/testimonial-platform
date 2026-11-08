@@ -28,10 +28,14 @@ public class AppUserLookup {
 	 * Describes the user with the given id.
 	 *
 	 * @throws org.springframework.security.access.AccessDeniedException if no
-	 *         such user exists
+	 *         such user exists, or if there is no signed-in user at all
 	 */
 	@Transactional(readOnly = true)
 	public CurrentUserResponse describe(UUID userId) {
+		if (userId == null) {
+			throw new org.springframework.security.access.AccessDeniedException("No such user");
+		}
+
 		AppUser user = appUserRepository.findById(userId)
 				.orElseThrow(() -> new org.springframework.security.access.AccessDeniedException(
 						"No such user"));

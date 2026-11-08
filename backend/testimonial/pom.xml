@@ -176,6 +176,13 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- TestRestTemplate needs RestTemplateBuilder, which lives in this
+		     module. In Boot 4 the webmvc starter no longer brings it along. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-restclient</artifactId>
+			<scope>test</scope>
+		</dependency>
 
 		<!-- Real PostgreSQL for integration tests (PRD 10 acceptance criteria) -->
 		<dependency>

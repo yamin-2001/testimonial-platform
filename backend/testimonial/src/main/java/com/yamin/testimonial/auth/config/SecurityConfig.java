@@ -58,12 +58,14 @@ public class SecurityConfig {
 						.requestMatchers("/api/auth/login", "/api/auth/register",
 								"/api/auth/refresh", "/api/auth/logout",
 								"/api/auth/forgot-password", "/api/auth/reset-password",
-								"/api/auth/verify-email", "/api/auth/me")
+								"/api/auth/verify-email")
 						.permitAll()
 						// The Google OAuth2 flow: the redirect to Google's consent
 						// screen and the callback that returns with the code.
 						.requestMatchers("/oauth2/**", "/login/**").permitAll()
-						// Everything else requires an authenticated user.
+						// Everything else requires an authenticated user. That
+						// includes /api/auth/me, which describes the signed-in
+						// user and so has nothing to say without a session.
 						.anyRequest().authenticated())
 				.exceptionHandling(exceptions -> exceptions
 						// A missing or invalid token is a 401, not a redirect.

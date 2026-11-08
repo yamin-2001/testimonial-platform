@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.yamin.testimonial.auth.mail.MailService;
 import com.yamin.testimonial.auth.token.JwtService;
 import com.yamin.testimonial.auth.token.JwtService.TokenType;
+import com.yamin.testimonial.auth.token.RefreshToken;
+import com.yamin.testimonial.auth.token.RefreshTokenRepository;
 import com.yamin.testimonial.auth.token.RevokedRefreshToken;
 import com.yamin.testimonial.auth.token.RevokedRefreshTokenRepository;
 import com.yamin.testimonial.auth.token.TokenPair;
@@ -54,6 +57,8 @@ public class AuthService {
 
 	private final RevokedRefreshTokenRepository revokedRefreshTokenRepository;
 
+	private final RefreshTokenRepository refreshTokenRepository;
+
 	private final PasswordEncoder passwordEncoder;
 
 	private final JwtService jwtService;
@@ -66,6 +71,7 @@ public class AuthService {
 			EmailVerificationTokenRepository emailVerificationTokenRepository,
 			PasswordResetTokenRepository passwordResetTokenRepository,
 			RevokedRefreshTokenRepository revokedRefreshTokenRepository,
+			RefreshTokenRepository refreshTokenRepository,
 			PasswordEncoder passwordEncoder,
 			JwtService jwtService,
 			MailService mailService,
@@ -74,6 +80,7 @@ public class AuthService {
 		this.emailVerificationTokenRepository = emailVerificationTokenRepository;
 		this.passwordResetTokenRepository = passwordResetTokenRepository;
 		this.revokedRefreshTokenRepository = revokedRefreshTokenRepository;
+		this.refreshTokenRepository = refreshTokenRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.mailService = mailService;
@@ -129,9 +136,22 @@ public class AuthService {
 
 	/**
 	 * Issues a session for a user.
+	 *
+	 * <p>The refresh token is recorded against the user, so that every
+	 * session they hold can be ended at once -- which is what a password reset
+	 * has to do.
 	 */
+	@Transactional
 	public TokenPair issueSession(UUID userId) {
-		return jwtService.issueTokens(userId);
+		TokenPair pair = jwtService.issueTokens(userId);
+
+		refreshTokenRepository.save(new RefreshToken(
+				pair.refreshTokenId(),
+				userId,
+				Instant.now().plus(pair.refreshTokenTtl()),
+				Instant.now()));
+
+		return pair;
 	}
 
 	/**
@@ -158,7 +178,17 @@ public class AuthService {
 		}
 
 		revokeRefreshToken(jti, claims.getExpiration().toInstant());
-		return jwtService.issueTokens(userId);
+		TokenPair pair = jwtService.issueTokens(userId);
+
+		// The rotated token is replaced by the new one.
+		refreshTokenRepository.deleteById(jti);
+		refreshTokenRepository.save(new RefreshToken(
+				pair.refreshTokenId(),
+				userId,
+				Instant.now().plus(pair.refreshTokenTtl()),
+				Instant.now()));
+
+		return pair;
 	}
 
 	/**
@@ -183,6 +213,8 @@ public class AuthService {
 
 	private void revokeRefreshToken(String jti, Instant expiresAt) {
 		revokedRefreshTokenRepository.save(new RevokedRefreshToken(jti, expiresAt, Instant.now()));
+		// The token is no longer a live session.
+		refreshTokenRepository.deleteById(jti);
 	}
 
 	/**
@@ -246,8 +278,26 @@ public class AuthService {
 		user.setPasswordHash(passwordEncoder.encode(newPassword));
 		appUserRepository.save(user);
 
-		// A password change should end any session opened with the old one.
-		revokedRefreshTokenRepository.deleteAll();
+		// A password change must end every session opened with the old
+		// password, so a refresh token stolen before the reset cannot be used
+		// afterwards.
+		revokeAllSessions(user.getId());
+	}
+
+	/**
+	 * Ends every session a user holds.
+	 *
+	 * <p>Each live refresh token is recorded as revoked, so the refresh
+	 * endpoint rejects it, and the record of the live token is removed.
+	 */
+	private void revokeAllSessions(UUID userId) {
+		Instant now = Instant.now();
+		List<RefreshToken> live = refreshTokenRepository.findAllByUserId(userId);
+		for (RefreshToken token : live) {
+			revokedRefreshTokenRepository.save(
+					new RevokedRefreshToken(token.getJti(), token.getExpiresAt(), now));
+		}
+		refreshTokenRepository.deleteAll(live);
 	}
 
 	/** Describes the signed-in user. */

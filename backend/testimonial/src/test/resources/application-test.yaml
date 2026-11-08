@@ -36,6 +36,11 @@ app:
     webhook-secret: whsec_test_dummy
   turnstile:
     secret-key: test-turnstile-secret
+  mail:
+    # On, so that MailService takes the sending path and the recording sender
+    # captures the messages. Off, it would only write them to the log.
+    smtp-configured: true
+    from-address: no-reply@test.local
 
 logging:
   level:
