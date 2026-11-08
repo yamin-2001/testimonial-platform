@@ -72,6 +72,23 @@ server:
 
 app:
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+  auth:
+    # Sessions are a short-lived access JWT plus a rotating refresh token,
+    # both delivered in HttpOnly cookies. Override AUTH_JWT_SECRET in any
+    # deployed environment.
+    jwt-secret: ${AUTH_JWT_SECRET:development-only-secret-change-me-in-production}
+    access-token-ttl: 15m
+    refresh-token-ttl: 7d
+    access-token-cookie: session
+    refresh-token-cookie: refresh
+    # Cookies require HTTPS in production. Disabled locally so the cookies
+    # work over plain HTTP on localhost.
+    secure-cookies: ${AUTH_SECURE_COOKIES:false}
+  mail:
+    from-address: ${MAIL_FROM_ADDRESS:no-reply@example.com}
+    # When false, MailService writes the message to the log instead of
+    # sending it. Set to true (with MAIL_HOST) to send real email.
+    smtp-configured: ${MAIL_SMTP_CONFIGURED:false}
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
     publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
