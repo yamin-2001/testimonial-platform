@@ -1,5 +1,6 @@
 package com.yamin.testimonial.testimonials;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -179,14 +180,49 @@ public interface TestimonialRepository extends JpaRepository<Testimonial, UUID> 
 	 *
 	 * <p>Bucketing happens in the database so that empty days can be filled in
 	 * with zero by the caller.
+	 *
+	 * <p>The range is bounded here rather than in Java, so the database only
+	 * counts the days the chart will show. The lower bound is inclusive and
+	 * the upper one is exclusive, so a range of thirty days covers exactly
+	 * thirty buckets.
+	 *
+	 * <p>Hidden testimonials are counted. Hiding a testimonial takes it out of
+	 * the public pages, not out of the owner's counts -- the PRD says deleted
+	 * testimonials are excluded, and says nothing about hidden ones, which
+	 * are still the owner's to read (PRD 4.7).
 	 */
 	@Query(value = """
 			select date_trunc('day', t.created_at at time zone 'UTC') as bucket, count(t)
 			from testimonials t
 			join spaces s on s.id = t.space_id
 			where s.user_id = :ownerId
+			  and t.created_at >= :from
+			  and t.created_at < :to
 			group by bucket
 			order by bucket
 			""", nativeQuery = true)
-	List<Object[]> countSubmissionsPerDay(@Param("ownerId") UUID ownerId);
+	List<Object[]> countSubmissionsPerDayBetween(@Param("ownerId") UUID ownerId,
+			@Param("from") Instant from, @Param("to") Instant to);
+
+	/**
+	 * The most recent submissions across a user's Spaces (PRD 4.6).
+	 *
+	 * <p>Newest first, across every Space the user owns rather than one
+	 * Space, because the dashboard is the view of everything they have
+	 * collected.
+	 *
+	 * <p>The Space's title and slug are selected along with the
+	 * testimonial, rather than read from the lazy reference afterwards.
+	 * {@code open-in-view} is off, so a reference touched outside the
+	 * transaction would fail to initialise.
+	 */
+	@Query("""
+			select new com.yamin.testimonial.testimonials.RecentSubmissionView(
+				t.id, t.name, t.message, t.rating, t.space.title, t.space.slug, t.createdAt)
+			from Testimonial t
+			where t.space.owner.id = :ownerId
+			order by t.createdAt desc, t.id desc
+			""")
+	List<RecentSubmissionView> findRecentByOwnerId(@Param("ownerId") UUID ownerId,
+			Pageable pageable);
 }
