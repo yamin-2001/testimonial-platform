@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
+
 const nextConfig: NextConfig = {
   experimental: {
     // Lets `next dev` maintain the AGENTS.md block for AI coding agents.
@@ -12,6 +14,19 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  // The session cookie is the auth mechanism, and it is SameSite=Lax. That
+  // only works if the API is same-origin with the app, so requests to
+  // /api/* are proxied to the Java backend rather than called cross-origin.
+  // The browser therefore only ever sees one origin, and the cookie is
+  // attached without needing SameSite=None (which would require HTTPS).
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
+      },
+    ];
   },
   // NOTE: `cacheComponents` / `partialPrefetching` are intentionally NOT enabled.
   // Cache Components is designed for static-shell + streaming patterns; every
