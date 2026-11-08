@@ -108,7 +108,7 @@ public class SpaceService {
 		space.setThemeKey(resolveTheme(themeKey, ownerId).getKey());
 		space.setRatingEnabled(ratingEnabled);
 		space.setFormConfig(normaliseFormConfig(formConfig));
-		space.setEmbedConfig(new LinkedHashMap<>());
+		space.setEmbedConfig(com.yamin.testimonial.embed.EmbedSettings.defaults());
 		space.setPublicProfileFields(new java.util.ArrayList<>());
 
 		Space saved = spaceRepository.save(space);
