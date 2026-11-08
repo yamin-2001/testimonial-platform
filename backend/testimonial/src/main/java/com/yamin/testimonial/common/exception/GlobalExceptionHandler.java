@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.yamin.testimonial.billing.BillingException;
 import com.yamin.testimonial.spaces.PlanLimitException;
 import com.yamin.testimonial.testimonials.RateLimitException;
 
@@ -81,6 +82,19 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<Map<String, Object>> handleRateLimitException(RateLimitException e) {
 		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
 				.header(HttpHeaders.RETRY_AFTER, Long.toString(e.getRetryAfterSeconds()))
+				.body(body(e.getMessage()));
+	}
+
+	/**
+	 * A billing operation Stripe refused (PRD 4.9).
+	 *
+	 * <p>502, because the request was fine and the failure was on Stripe's
+	 * side. The message is the application's own, so no Stripe detail reaches
+	 * the browser.
+	 */
+	@ExceptionHandler(BillingException.class)
+	public ResponseEntity<Map<String, Object>> handleBillingException(BillingException e) {
+		return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
 				.body(body(e.getMessage()));
 	}
 

@@ -93,6 +93,13 @@ app:
     secret-key: ${STRIPE_SECRET_KEY:}
     publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    # The Stripe price for the Premium plan. Without it there is nothing to
+    # check out, and the Billing page says so rather than failing (PRD 4.9).
+    premium-price-id: ${STRIPE_PREMIUM_PRICE_ID:}
+    # Where Stripe sends the user back to. The redirect does not change the
+    # plan -- only a verified webhook does (PRD 4.9).
+    success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/billing?checkout=success}
+    cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/billing?checkout=cancelled}
   turnstile:
     secret-key: ${TURNSTILE_SECRET_KEY:}
     verify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify

@@ -34,6 +34,11 @@ app:
     secret-key: sk_test_dummy
     publishable-key: pk_test_dummy
     webhook-secret: whsec_test_dummy
+    # A price id, so the application believes Stripe is configured. The
+    # gateway is stubbed in the tests, so no real checkout is ever started.
+    premium-price-id: price_test_dummy
+    success-url: http://localhost:3000/billing?checkout=success
+    cancel-url: http://localhost:3000/billing?checkout=cancelled
   turnstile:
     # Blank on purpose. A non-blank secret would make every submission test
     # call Cloudflare for real. The CAPTCHA path is proved by its own test,

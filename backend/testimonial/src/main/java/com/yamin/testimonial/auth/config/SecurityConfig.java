@@ -64,6 +64,12 @@ public class SecurityConfig {
 						// Submitters never authenticate (PRD 6.4).
 						.requestMatchers("/api/public/**")
 						.permitAll()
+						// Public: Stripe's webhook. Stripe is not a user of this
+						// application and has no session cookie to send; the
+						// request is authenticated by its signature instead
+						// (PRD 4.9, 6.15).
+						.requestMatchers("/api/billing/webhooks/**")
+						.permitAll()
 						// The Google OAuth2 flow: the redirect to Google's consent
 						// screen and the callback that returns with the code.
 						.requestMatchers("/oauth2/**", "/login/**").permitAll()
