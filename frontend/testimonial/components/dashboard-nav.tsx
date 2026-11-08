@@ -25,7 +25,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", available: true },
   { href: "/spaces", label: "Spaces", available: true },
-  { href: "/inbox", label: "Inbox", available: false },
+  { href: "/inbox", label: "Inbox", available: true },
   { href: "/billing", label: "Billing", available: false },
   { href: "/settings", label: "Settings", available: false },
 ];

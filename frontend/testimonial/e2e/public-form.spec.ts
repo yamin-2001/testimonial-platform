@@ -23,6 +23,23 @@ function uniqueEmail(prefix: string): string {
 }
 
 /**
+ * Waits for React to attach its event handlers.
+ *
+ * A click that lands before hydration is handled by the browser rather than
+ * by React, which would submit the form the wrong way -- as a plain GET,
+ * putting the values in the query string instead of posting them.
+ */
+async function hydrated(page: import("@playwright/test").Page) {
+  await page.waitForLoadState("networkidle");
+  await page.waitForFunction(() => {
+    const form = document.querySelector("form");
+    return form !== null && Object.keys(form).some((key) =>
+      key.startsWith("__reactProps$"),
+    );
+  });
+}
+
+/**
  * Registers an account, confirms its email address and signs in.
  */
 async function registerAndVerify(
@@ -30,6 +47,7 @@ async function registerAndVerify(
   email: string,
 ) {
   await page.goto("/register");
+  await hydrated(page);
   await page.getByLabel("Name").fill("Test Owner");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("a-good-password");
@@ -42,6 +60,7 @@ async function registerAndVerify(
   await verifyEmailDirectly(email);
 
   await page.goto("/login");
+  await hydrated(page);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("a-good-password");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -62,6 +81,7 @@ async function createSpace(
   },
 ): Promise<string> {
   await page.goto("/spaces/new");
+  await hydrated(page);
   await page.getByLabel("Title", { exact: true }).fill(options.title);
   await page.getByLabel("Public URL").fill(options.slug);
   await page.getByRole("button", { name: "Continue" }).click();
@@ -103,6 +123,7 @@ test.describe("the public form", () => {
     await context.clearCookies();
 
     await page.goto(`/s/${slug}`);
+    await hydrated(page);
     await expect(page.getByRole("heading", { name: "Public Reviews" })).toBeVisible();
 
     await page.getByLabel("Your name").fill("Ada Lovelace");
@@ -144,6 +165,7 @@ test.describe("the public form", () => {
 
     await page.context().clearCookies();
     await page.goto(`/s/${slug}`);
+    await hydrated(page);
 
     await page.getByRole("button", { name: "Send testimonial" }).click();
 
@@ -207,6 +229,7 @@ test.describe("the public form", () => {
     const visitorPage = await visitor.newPage();
 
     await visitorPage.goto(`/s/${slug}`);
+    await hydrated(visitorPage);
     await visitorPage.getByLabel("Your name").fill("Ada");
     await visitorPage.getByLabel("Your email").fill("ada@example.com");
     await visitorPage.getByLabel("Your testimonial").fill("Great.");
@@ -241,6 +264,7 @@ test.describe("the public form", () => {
 
     await page.context().clearCookies();
     await page.goto(`/s/${slug}`);
+    await hydrated(page);
 
     await page.getByLabel("Your name").fill("Ada");
     await page.getByLabel("Your email").fill("ada@example.com");
@@ -270,6 +294,7 @@ test.describe("the public form", () => {
 
     await page.context().clearCookies();
     await page.goto(`/s/${slug}`);
+    await hydrated(page);
 
     const stars = page.getByRole("radio", { name: "5 stars" });
     await expect(stars).toHaveCount(1);
@@ -327,6 +352,7 @@ test.describe("the public form", () => {
     const botPage = await bot.newPage();
 
     await botPage.goto(`/s/${slug}`);
+    await hydrated(botPage);
 
     // Fill the hidden field, as a bot would.
     await botPage
@@ -374,6 +400,7 @@ test.describe("the public form", () => {
     const visitorPage = await visitor.newPage();
 
     await visitorPage.goto(`/s/${slug}`);
+    await hydrated(visitorPage);
     await visitorPage.getByLabel("Your name").fill("Grace Hopper");
     await visitorPage.getByLabel("Your email").fill("grace@example.com");
     await visitorPage
