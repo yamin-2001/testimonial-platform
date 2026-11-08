@@ -131,6 +131,9 @@ class AnalyticsControllerTest extends PostgresTestContainer {
 		assertThat(response.getBody()).contains("\"name\":\"Ada Lovelace\"");
 		assertThat(response.getBody()).contains("\"spaceTitle\":\"Acme Reviews\"");
 		assertThat(response.getBody()).contains("\"spaceSlug\":\"acme-reviews\"");
+		// The id is what the dashboard's list links to, so it travels with the
+		// entry.
+		assertThat(response.getBody()).contains("\"spaceId\":\"" + space.getId() + "\"");
 	}
 
 	@Test

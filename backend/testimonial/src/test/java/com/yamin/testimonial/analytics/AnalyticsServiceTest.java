@@ -178,6 +178,7 @@ class AnalyticsServiceTest extends PostgresTestContainer {
 
 		assertThat(recent.spaceTitle()).isEqualTo("Acme Reviews");
 		assertThat(recent.spaceSlug()).isEqualTo("acme-reviews");
+		assertThat(recent.spaceId()).isEqualTo(space.getId());
 		assertThat(recent.message()).isEqualTo("A testimonial.");
 	}
 

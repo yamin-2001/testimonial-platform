@@ -44,6 +44,7 @@ public final class AnalyticsDtos {
 	 * @param name the submitter's name
 	 * @param message the testimonial text
 	 * @param rating the rating, if one was given
+	 * @param spaceId the Space's id
 	 * @param spaceTitle the Space it was submitted to
 	 * @param spaceSlug that Space's slug
 	 * @param submittedAt when it was submitted
@@ -53,6 +54,7 @@ public final class AnalyticsDtos {
 			String name,
 			String message,
 			Short rating,
+			UUID spaceId,
 			String spaceTitle,
 			String spaceSlug,
 			Instant submittedAt) {
@@ -77,6 +79,7 @@ public final class AnalyticsDtos {
 								item.name(),
 								item.message(),
 								item.rating(),
+								item.spaceId(),
 								item.spaceTitle(),
 								item.spaceSlug(),
 								item.submittedAt()))

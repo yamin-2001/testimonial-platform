@@ -211,14 +211,15 @@ public interface TestimonialRepository extends JpaRepository<Testimonial, UUID> 
 	 * Space, because the dashboard is the view of everything they have
 	 * collected.
 	 *
-	 * <p>The Space's title and slug are selected along with the
+	 * <p>The Space's id, title and slug are selected along with the
 	 * testimonial, rather than read from the lazy reference afterwards.
 	 * {@code open-in-view} is off, so a reference touched outside the
-	 * transaction would fail to initialise.
+	 * transaction would fail to initialise. The id is what the dashboard's
+	 * list links to.
 	 */
 	@Query("""
 			select new com.yamin.testimonial.testimonials.RecentSubmissionView(
-				t.id, t.name, t.message, t.rating, t.space.title, t.space.slug, t.createdAt)
+				t.id, t.name, t.message, t.rating, t.space.id, t.space.title, t.space.slug, t.createdAt)
 			from Testimonial t
 			where t.space.owner.id = :ownerId
 			order by t.createdAt desc, t.id desc
