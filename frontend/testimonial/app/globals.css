@@ -12,6 +12,27 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/*
+ * The colours the charts draw with.
+ *
+ * A chart library draws into the page rather than into the React tree, so a
+ * Tailwind class on one of its elements does not reach the SVG. These
+ * variables do, because they are inherited down into the SVG -- and unlike
+ * `currentColor`, they carry a value the gradient's stops can use, because a
+ * `<stop>` inside `<defs>` does not inherit `currentColor` from the page.
+ */
+:root {
+  --chart-ink: #18181b;
+  --chart-grid: #e4e4e7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chart-ink: #fafafa;
+    --chart-grid: #3f3f46;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

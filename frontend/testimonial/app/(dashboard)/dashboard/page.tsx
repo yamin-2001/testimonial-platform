@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { AnalyticsPanel } from "@/components/analytics-panel";
+import { DashboardAnalytics } from "@/lib/analytics";
 import { apiFetchWithSession } from "@/lib/session";
 import { DashboardSummary, Space } from "@/lib/spaces";
 
@@ -7,13 +9,15 @@ import { DashboardSummary, Space } from "@/lib/spaces";
  * The dashboard (PRD 4.6).
  *
  * The numbers come from the backend, which counts only the signed-in user's
- * own data. The chart and the recent-submissions list arrive with the
- * analytics work; this page shows the totals the backend already has.
+ * own data. The chart and the recent-submissions list come from the analytics
+ * endpoint; the range the chart covers is chosen in the browser, so the
+ * default range is fetched here and the rest are fetched by the client.
  */
 export default async function DashboardPage() {
-  const [summary, spaces] = await Promise.all([
+  const [summary, spaces, analytics] = await Promise.all([
     apiFetchWithSession<DashboardSummary>("/api/spaces/dashboard/summary"),
     apiFetchWithSession<Space[]>("/api/spaces"),
+    apiFetchWithSession<DashboardAnalytics>("/api/analytics/dashboard"),
   ]);
 
   const spaceList = spaces ?? [];
@@ -39,24 +43,36 @@ export default async function DashboardPage() {
       </div>
 
       {!summary?.premium ? (
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div
+          data-testid="dashboard-free-notice"
+          className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40"
+        >
           <p className="font-medium text-zinc-900 dark:text-zinc-100">
             You&apos;re on the Free plan
           </p>
           <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-            You can own {summary?.spaceLimit ?? 3} Spaces and collect{" "}
-            {summary?.totalTestimonials ?? 0 === 0 ? "100" : "100"} testimonials
-            in each. Premium unlocks more Spaces, premium themes and the
-            carousel embed.
+            You can own {summary?.spaceLimit ?? 3} Spaces and collect 100
+            testimonials in each. Premium unlocks more Spaces, premium themes
+            and the carousel embed.
           </p>
         </div>
       ) : null}
 
       <dl className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Spaces" value={summary?.totalSpaces ?? 0} />
-        <Stat label="Testimonials" value={summary?.totalTestimonials ?? 0} />
-        <Stat label="Unique submitters" value={summary?.uniqueSubmitters ?? 0} />
+        <Stat id="stat-spaces" label="Spaces" value={summary?.totalSpaces ?? 0} />
+        <Stat
+          id="stat-testimonials"
+          label="Testimonials"
+          value={summary?.totalTestimonials ?? 0}
+        />
+        <Stat
+          id="stat-unique-submitters"
+          label="Unique submitters"
+          value={summary?.uniqueSubmitters ?? 0}
+        />
       </dl>
+
+      <AnalyticsPanel initial={analytics} />
 
       <section aria-labelledby="spaces-heading">
         <div className="flex items-center justify-between">
@@ -119,9 +135,20 @@ export default async function DashboardPage() {
 /**
  * One of the headline numbers.
  */
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({
+  id,
+  label,
+  value,
+}: {
+  id: string;
+  label: string;
+  value: number;
+}) {
   return (
-    <div className="rounded-xl border border-zinc-200 px-4 py-4 dark:border-zinc-800">
+    <div
+      data-testid={id}
+      className="rounded-xl border border-zinc-200 px-4 py-4 dark:border-zinc-800"
+    >
       <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
       <dd className="mt-1 text-3xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
         {value}
