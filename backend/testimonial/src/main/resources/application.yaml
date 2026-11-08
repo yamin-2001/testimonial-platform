@@ -25,7 +25,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    # Never baseline. With baseline-on-migrate=true, Flyway silently marks a
+    # non-empty schema as baseline and SKIPS the migrations, leaving tables
+    # missing and failing ddl-auto=validate with a confusing error. Flyway
+    # owns the schema outright (PRD 8).
+    baseline-on-migrate: false
 
   mail:
     host: ${MAIL_HOST:localhost}
