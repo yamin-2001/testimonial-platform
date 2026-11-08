@@ -39,6 +39,12 @@ export default async function SpaceDetailPage({
 
         <div className="flex shrink-0 items-center gap-2">
           <Link
+            href={`/spaces/${space.id}/embed`}
+            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Embed
+          </Link>
+          <Link
             href={`/spaces/${space.id}/edit`}
             className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
           >
