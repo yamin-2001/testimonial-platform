@@ -342,6 +342,133 @@ test.describe("the Spaces wizard", () => {
 });
 
 /**
+ * The live preview in the wizard (PRD 4.3, 4.4).
+ *
+ * The preview shows what the customer will see, so it must follow the
+ * choices the owner makes.
+ */
+test.describe("the wizard's preview", () => {
+  test("the preview shows the fields the Space collects", async ({ page }) => {
+    await registerAndVerify(page, uniqueEmail("preview"));
+
+    await page.goto("/spaces/new");
+    await page.getByLabel("Title", { exact: true }).fill("Preview Space");
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: /what should the form ask for/i }),
+    ).toBeVisible();
+
+    // The preview shows every optional field by default. The wizard's own
+    // inputs are in the form too, so the preview is scoped by its hook.
+    const preview = page.getByTestId("testimonial-form");
+
+    // Name, email, the four optional fields and the testimonial.
+    for (const name of [
+      "name",
+      "email",
+      "companyName",
+      "jobTitle",
+      "websiteUrl",
+      "socialLinks",
+      "message",
+    ]) {
+      await expect(preview.locator(`[name="${name}"]`)).toHaveCount(1);
+    }
+
+    // Turning one off removes it from the preview.
+    await page.getByRole("checkbox", { name: "Collect Company name" }).uncheck();
+    await expect(preview.locator('[name="companyName"]')).toHaveCount(0);
+    await expect(preview.locator('[name="jobTitle"]')).toHaveCount(1);
+  });
+
+  test("a field switched off is stored off and stays off", async ({ page }) => {
+    const token = runToken();
+    await registerAndVerify(page, uniqueEmail("field-round-trip"));
+
+    await page.goto("/spaces/new");
+    await page.getByLabel("Title", { exact: true }).fill("Round Trip");
+    await page.getByLabel("Public URL").fill(`round-trip-${token}`);
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    // Switch the company name off.
+    await page.getByRole("checkbox", { name: "Collect Company name" }).uncheck();
+    await expect(
+      page.getByTestId("testimonial-form").locator('[name="companyName"]'),
+    ).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await submitWizard(page);
+
+    await expect(
+      page.getByRole("heading", { name: /your space is ready/i }),
+    ).toBeVisible();
+
+    // The backend stored it as off, and the Space's page says so.
+    await page.goto("/spaces");
+    await page.getByRole("link", { name: "Round Trip" }).click();
+
+    const companyRow = page.locator("li", { hasText: "Company name" });
+    await expect(companyRow).toContainText("Not collected");
+
+    // The other optional fields are still collected.
+    const jobRow = page.locator("li", { hasText: "Job title" });
+    await expect(jobRow).toContainText("Collected, optional");
+  });
+
+  test("the preview follows the chosen theme", async ({ page }) => {
+    await registerAndVerify(page, uniqueEmail("theme-preview"));
+
+    await page.goto("/spaces/new");
+    await page.getByLabel("Title", { exact: true }).fill("Themed Space");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: /choose a theme/i }),
+    ).toBeVisible();
+
+    // The preview's own background is the theme's background.
+    const preview = page.getByTestId("testimonial-form");
+    const light = await preview.evaluate(
+      (el) => getComputedStyle(el).backgroundColor,
+    );
+
+    await page.getByRole("button", { name: "Dark" }).click();
+    await page.waitForTimeout(200);
+
+    const dark = await preview.evaluate(
+      (el) => getComputedStyle(el).backgroundColor,
+    );
+
+    expect(light).not.toEqual("rgba(0, 0, 0, 0)");
+    expect(dark).not.toEqual(light);
+  });
+
+  test("the preview shows the rating once it is switched on", async ({ page }) => {
+    await registerAndVerify(page, uniqueEmail("rating-preview"));
+
+    await page.goto("/spaces/new");
+    await page.getByLabel("Title", { exact: true }).fill("Rated Space");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: /ask for a rating/i }),
+    ).toBeVisible();
+
+    // No stars yet.
+    await expect(page.getByRole("img", { name: "1 star" })).toHaveCount(0);
+
+    await page.getByRole("checkbox", { name: /show a 1.5 star rating/i }).check();
+    await expect(page.getByRole("img", { name: "1 star" })).toHaveCount(1);
+    await expect(page.getByRole("img", { name: "5 stars" })).toHaveCount(1);
+  });
+});
+
+/**
  * Confirms an account's email address directly in the database.
  *
  * The verification link is emailed, and the test has no access to the inbox.

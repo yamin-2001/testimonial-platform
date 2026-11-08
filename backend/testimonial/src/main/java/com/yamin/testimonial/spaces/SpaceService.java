@@ -342,10 +342,13 @@ public class SpaceService {
 				required = false;
 			}
 
-			config.put(field.getKey(), Map.of("enabled", enabled, "required", required));
+			Map<String, Object> settings = new LinkedHashMap<>();
+			settings.put("enabled", enabled);
+			settings.put("required", required);
+			config.put(field.getKey(), settings);
 		}
 
-		return config;
+		return FormDefinition.describe(config);
 	}
 
 	private boolean asBoolean(Object value, boolean fallback) {

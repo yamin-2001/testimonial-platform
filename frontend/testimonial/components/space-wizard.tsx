@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { ApiError } from "@/lib/api";
+import { TestimonialFormFields } from "@/components/testimonial-form-fields";
+import { themeStyle } from "@/lib/themes";
 import {
   FieldSettings,
   OPTIONAL_FIELDS,
@@ -233,7 +235,11 @@ export function SpaceWizard({
       ) : null}
 
       {step === "fields" ? (
-        <FieldsStep values={values} onChange={setFieldSetting} />
+        <FieldsStep
+          values={values}
+          onChange={setFieldSetting}
+          preview={<Preview values={values} />}
+        />
       ) : null}
 
       {step === "theme" ? (
@@ -242,6 +248,7 @@ export function SpaceWizard({
           selected={values.themeKey}
           premium={premium}
           onChange={(key) => setValue("themeKey", key)}
+          preview={<Preview values={values} />}
         />
       ) : null}
 
@@ -249,6 +256,7 @@ export function SpaceWizard({
         <RatingsStep
           enabled={values.ratingEnabled}
           onChange={(enabled) => setValue("ratingEnabled", enabled)}
+          preview={<Preview values={values} />}
         />
       ) : null}
 
@@ -413,9 +421,11 @@ function DetailsStep({
 function FieldsStep({
   values,
   onChange,
+  preview,
 }: {
   values: WizardValues;
   onChange: (key: string, setting: keyof FieldSettings, value: boolean) => void;
+  preview: React.ReactNode;
 }) {
   return (
     <section className="space-y-5">
@@ -429,50 +439,112 @@ function FieldsStep({
         </p>
       </div>
 
-      <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-        {OPTIONAL_FIELDS.map((field) => {
-          const settings = values.formConfig[field.key] ?? {
-            enabled: false,
-            required: false,
-          };
-          return (
-            <li key={field.key} className="px-4 py-3">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {field.label}
-                </span>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ul className="divide-y divide-zinc-200 self-start rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          {OPTIONAL_FIELDS.map((field) => {
+            // A field the configuration does not mention is on, matching the
+            // backend: the default is to collect everything optional.
+            const settings = values.formConfig[field.key] ?? {
+              enabled: true,
+              required: false,
+            };
+            const collectId = `${field.key}-collect`;
+            const requireId = `${field.key}-require`;
+            return (
+              <li key={field.key} className="px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {field.label}
+                  </span>
 
-                <label className="flex shrink-0 items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  <input
-                    type="checkbox"
-                    checked={settings.enabled}
-                    onChange={(event) =>
-                      onChange(field.key, "enabled", event.target.checked)
-                    }
-                    className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-zinc-600 dark:bg-zinc-900"
-                  />
-                  Collect
-                </label>
-              </div>
+                  {/*
+                    The checkbox is labelled with the field it belongs to,
+                    so a screen reader says "Collect Company name" rather
+                    than four identical "Collect" boxes.
+                  */}
+                  <label
+                    htmlFor={collectId}
+                    className="flex shrink-0 items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400"
+                  >
+                    <input
+                      id={collectId}
+                      type="checkbox"
+                      aria-label={`Collect ${field.label}`}
+                      checked={settings.enabled}
+                      onChange={(event) =>
+                        onChange(field.key, "enabled", event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-zinc-600 dark:bg-zinc-900"
+                    />
+                    Collect
+                  </label>
+                </div>
 
-              {settings.enabled ? (
-                <label className="mt-2 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  <input
-                    type="checkbox"
-                    checked={settings.required}
-                    onChange={(event) =>
-                      onChange(field.key, "required", event.target.checked)
-                    }
-                    className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-zinc-600 dark:bg-zinc-900"
-                  />
-                  Required
-                </label>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+                {settings.enabled ? (
+                  <label
+                    htmlFor={requireId}
+                    className="mt-2 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400"
+                  >
+                    <input
+                      id={requireId}
+                      type="checkbox"
+                      aria-label={`Require ${field.label}`}
+                      checked={settings.required}
+                      onChange={(event) =>
+                        onChange(field.key, "required", event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-zinc-600 dark:bg-zinc-900"
+                    />
+                    Required
+                  </label>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+
+        <PreviewPanel title="What your customer sees">{preview}</PreviewPanel>
+      </div>
     </section>
+  );
+}
+
+/**
+ * The live preview of the public form (PRD 4.3, 4.4).
+ *
+ * It renders the same component the public page will use, so what the owner
+ * sees here is what the customer gets.
+ */
+function Preview({ values }: { values: WizardValues }) {
+  return (
+    <TestimonialFormFields
+      themeKey={values.themeKey}
+      formConfig={values.formConfig}
+      ratingEnabled={values.ratingEnabled}
+      title={values.title || "Your Space"}
+      subtitle={values.subtitle || null}
+      preview
+    />
+  );
+}
+
+/**
+ * A titled panel that holds a preview.
+ */
+function PreviewPanel({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        {title}
+      </p>
+      {children}
+    </div>
   );
 }
 
@@ -484,11 +556,13 @@ function ThemeStep({
   selected,
   premium,
   onChange,
+  preview,
 }: {
   themes: Theme[];
   selected: string;
   premium: boolean;
   onChange: (key: string) => void;
+  preview: React.ReactNode;
 }) {
   return (
     <section className="space-y-5">
@@ -501,51 +575,101 @@ function ThemeStep({
         </p>
       </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {themes.map((theme) => {
-          const locked = theme.premium && !premium;
-          const active = theme.key === selected;
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ul className="grid content-start gap-3 sm:grid-cols-2">
+          {themes.map((theme) => {
+            const locked = theme.premium && !premium;
+            const active = theme.key === selected;
 
-          return (
-            <li key={theme.key}>
-              <button
-                type="button"
-                onClick={() => onChange(theme.key)}
-                aria-pressed={active}
-                disabled={locked}
-                className={`w-full rounded-xl border p-4 text-left transition ${
-                  active
-                    ? "border-zinc-900 ring-1 ring-zinc-900 dark:border-zinc-50 dark:ring-zinc-50"
-                    : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700"
-                } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {theme.label}
-                  </span>
+            return (
+              <li key={theme.key}>
+                <button
+                  type="button"
+                  onClick={() => onChange(theme.key)}
+                  aria-pressed={active}
+                  disabled={locked}
+                  className={`w-full rounded-xl border p-4 text-left transition ${
+                    active
+                      ? "border-zinc-900 ring-1 ring-zinc-900 dark:border-zinc-50 dark:ring-zinc-50"
+                      : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700"
+                  } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      {theme.label}
+                    </span>
+                    {locked ? (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                        Premium
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* A miniature of the real form, in this theme. */}
+                  <ThemeSwatch themeKey={theme.key} />
+
                   {locked ? (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                      Premium
+                    <span className="mt-2 block text-xs text-zinc-500 dark:text-zinc-400">
+                      Upgrade to Premium to use this theme.
                     </span>
                   ) : null}
-                </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
 
-                <span
-                  aria-hidden="true"
-                  className={`mt-3 block h-16 rounded-lg border border-zinc-200 dark:border-zinc-700 ${themePreviewClass(theme.key)}`}
-                />
-
-                {locked ? (
-                  <span className="mt-2 block text-xs text-zinc-500 dark:text-zinc-400">
-                    Upgrade to Premium to use this theme.
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+        <PreviewPanel title="What your customer sees">{preview}</PreviewPanel>
+      </div>
     </section>
+  );
+}
+
+/**
+ * A small preview of a theme.
+ *
+ * Shows the colours and the heading face of the theme, which is what
+ * distinguishes one from another (PRD 4.4).
+ */
+function ThemeSwatch({ themeKey }: { themeKey: string }) {
+  const style = themeStyle(themeKey);
+
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-3 block rounded-lg border p-3"
+      style={{
+        backgroundColor: style.background,
+        borderColor: style.border,
+      }}
+    >
+      <span
+        className="block text-sm leading-tight"
+        style={{
+          fontFamily: style.headingFont,
+          fontWeight: style.headingWeight,
+          fontStyle: style.headingItalic ? "italic" : "normal",
+          letterSpacing: style.headingTracking,
+          color: style.text,
+        }}
+      >
+        Acme Reviews
+      </span>
+      <span
+        className="mt-1.5 block text-[11px] leading-snug"
+        style={{ color: style.muted, fontFamily: style.bodyFont }}
+      >
+        What our customers say
+      </span>
+      <span
+        className="mt-2 block h-1.5 w-16 rounded-full"
+        style={{ backgroundColor: style.accent }}
+      />
+      <span
+        className="mt-1.5 block h-1.5 w-24 rounded-full"
+        style={{ backgroundColor: style.border }}
+      />
+    </span>
   );
 }
 
@@ -555,9 +679,11 @@ function ThemeStep({
 function RatingsStep({
   enabled,
   onChange,
+  preview,
 }: {
   enabled: boolean;
   onChange: (enabled: boolean) => void;
+  preview: React.ReactNode;
 }) {
   return (
     <section className="space-y-5">
@@ -570,17 +696,21 @@ function RatingsStep({
         </p>
       </div>
 
-      <label className="flex items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(event) => onChange(event.target.checked)}
-          className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-zinc-600 dark:bg-zinc-900"
-        />
-        <span className="text-sm text-zinc-900 dark:text-zinc-100">
-          Show a 1&ndash;5 star rating on the public form
-        </span>
-      </label>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <label className="flex h-fit items-center gap-3 rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(event) => onChange(event.target.checked)}
+            className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-zinc-600 dark:bg-zinc-900"
+          />
+          <span className="text-sm text-zinc-900 dark:text-zinc-100">
+            Show a 1&ndash;5 star rating on the public form
+          </span>
+        </label>
+
+        <PreviewPanel title="What your customer sees">{preview}</PreviewPanel>
+      </div>
     </section>
   );
 }
@@ -597,25 +727,4 @@ function defaultFormConfig(): Record<string, FieldSettings> {
     config[field.key] = { enabled: true, required: false };
   }
   return config;
-}
-
-/**
- * A rough visual stand-in for each theme.
- *
- * The real rendering arrives with the public form; this is enough to tell the
- * themes apart in the picker (PRD 4.4).
- */
-function themePreviewClass(key: string): string {
-  switch (key) {
-    case "dark":
-      return "bg-zinc-800";
-    case "midnight":
-      return "bg-indigo-950";
-    case "sunset":
-      return "bg-orange-200";
-    case "editorial":
-      return "bg-amber-50";
-    default:
-      return "bg-zinc-50";
-  }
 }

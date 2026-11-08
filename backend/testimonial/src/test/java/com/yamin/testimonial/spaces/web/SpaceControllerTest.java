@@ -142,6 +142,74 @@ class SpaceControllerTest extends PostgresTestContainer {
 	}
 
 	@Test
+	@DisplayName("creating a Space keeps the fields the owner switched off")
+	void disabledFieldsAreStoredAsOff() {
+		ResponseEntity<String> response = post("/api/spaces",
+				"{\"title\":\"Acme Reviews\",\"formConfig\":{"
+						+ "\"companyName\":{\"enabled\":false,\"required\":true},"
+						+ "\"jobTitle\":{\"enabled\":true,\"required\":true}}}",
+				ownerHeaders());
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+		assertThat(response.getBody())
+				.contains("\"companyName\":{\"enabled\":false,\"required\":false}");
+		assertThat(response.getBody())
+				.contains("\"jobTitle\":{\"enabled\":true,\"required\":true}");
+	}
+
+	@Test
+	@DisplayName("a Space is created with every optional field collected")
+	void omittedFormConfigCollectsEverything() {
+		ResponseEntity<String> response = post("/api/spaces",
+				"{\"title\":\"Acme Reviews\"}", ownerHeaders());
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+		assertThat(response.getBody())
+				.contains("\"companyName\":{\"enabled\":true,\"required\":false}");
+		assertThat(response.getBody())
+				.contains("\"jobTitle\":{\"enabled\":true,\"required\":false}");
+		assertThat(response.getBody())
+				.contains("\"websiteUrl\":{\"enabled\":true,\"required\":false}");
+		assertThat(response.getBody())
+				.contains("\"socialLinks\":{\"enabled\":true,\"required\":false}");
+	}
+
+	@Test
+	@DisplayName("a field that is not configurable is ignored")
+	void unknownFormConfigFieldsAreIgnored() {
+		ResponseEntity<String> response = post("/api/spaces",
+				"{\"title\":\"Acme Reviews\",\"formConfig\":{"
+						+ "\"email\":{\"enabled\":false},"
+						+ "\"secretField\":{\"enabled\":true,\"required\":true}}}",
+				ownerHeaders());
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+		// The fixed fields are not configurable, so they are not in the
+		// configuration at all -- but they are still collected.
+		assertThat(response.getBody()).doesNotContain("secretField");
+		assertThat(response.getBody()).doesNotContain("\"email\":{\"enabled\"");
+	}
+
+	@Test
+	@DisplayName("editing a Space keeps the fields the owner switched off")
+	void editingKeepsDisabledFieldsOff() {
+		ResponseEntity<String> created = post("/api/spaces",
+				"{\"title\":\"Acme Reviews\",\"formConfig\":{"
+						+ "\"companyName\":{\"enabled\":false,\"required\":false}}}",
+				ownerHeaders());
+		UUID spaceId = idFrom(created.getBody());
+
+		ResponseEntity<String> updated = restTemplate.exchange("/api/spaces/" + spaceId,
+				HttpMethod.PUT,
+				new HttpEntity<>("{\"title\":\"Acme Reviews 2\"}", jsonHeaders(ownerHeaders())),
+				String.class);
+
+		assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(updated.getBody())
+				.contains("\"companyName\":{\"enabled\":false,\"required\":false}");
+	}
+
+	@Test
 	@DisplayName("another user's Space returns 404")
 	void anotherUsersSpaceIsNotFound() {
 		AppUser other = verifiedUser("other@example.com");
