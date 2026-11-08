@@ -153,7 +153,29 @@ class EmbedControllerTest extends PostgresTestContainer {
 	}
 
 	@Test
-	@DisplayName("the public embed endpoint needs no session")
+	@DisplayName("the public embed endpoint is readable from another origin")
+	void thePublicEndpointAllowsACrossOriginRead() {
+		Space space = spaceService.create(owner.getId(), "Acme Reviews", null, null, null, false,
+				null);
+		testimonial(space, "Ada", "Great.", true, false);
+
+		// The embed script runs on somebody else's page, so the browser sends
+		// a cross-origin request. Without this header the browser refuses the
+		// response and the widget renders nothing (PRD 4.8).
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.ORIGIN, "https://a-customer-site.example");
+
+		ResponseEntity<String> response = restTemplate.exchange(
+				"/api/public/embed/" + space.getSlug(), HttpMethod.GET,
+				new HttpEntity<>(headers), String.class);
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getHeaders().getAccessControlAllowOrigin())
+				.isEqualTo("https://a-customer-site.example");
+	}
+
+	@Test
+	@DisplayName("the public embed endpoint is readable without a session")
 	void thePublicEndpointNeedsNoSession() {
 		Space space = spaceService.create(owner.getId(), "Acme Reviews", null, null, null, false,
 				null);

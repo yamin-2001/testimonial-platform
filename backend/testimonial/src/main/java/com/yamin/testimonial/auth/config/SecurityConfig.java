@@ -90,17 +90,33 @@ public class SecurityConfig {
 	 * arrive same-origin and CORS is not strictly needed. It is configured
 	 * anyway to allow direct calls during development, with credentials
 	 * enabled so the auth cookies are still sent.
+	 *
+	 * <p>The embed endpoint is the exception. The embed script runs on somebody
+	 * else's page and fetches the content from here, so the browser sends it
+	 * a cross-origin request that this API has to answer (PRD 4.8). That
+	 * content is public -- it is exactly what the visitor's own browser shows
+	 * on the Space's page -- and it is fetched without credentials, so it is
+	 * served to any origin.
 	 */
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+		CorsConfiguration embed = new CorsConfiguration();
+		embed.setAllowedOriginPatterns(List.of("*"));
+		embed.setAllowedMethods(List.of("GET", "OPTIONS"));
+		embed.setAllowedHeaders(List.of("*"));
+		embed.setAllowCredentials(false);
+		embed.setMaxAge(3600L);
+		source.registerCorsConfiguration("/api/public/embed/**", embed);
+
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOriginPatterns(List.of("http://localhost:3000"));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("*"));
 		configuration.setAllowCredentials(true);
-
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
+
 		return source;
 	}
 }
