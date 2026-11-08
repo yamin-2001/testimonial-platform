@@ -79,6 +79,39 @@ cd frontend/testimonial && npm test
 cd frontend/testimonial && npm run test:e2e
 ```
 
+### Running the end-to-end tests
+
+The browser tests drive the real backend, so both servers must be up. Two
+settings make the suite reliable:
+
+**Run the frontend as a production build.** `next dev` grows to several
+gigabytes of memory over a few hours, and the suite's parallel browser workers
+then run into request timeouts that look like application bugs. Build and start
+it instead:
+
+```bash
+cd frontend/testimonial
+npm run build && npm run start
+```
+
+**Give the backend a webhook secret and a large submission rate limit.** The
+billing tests sign webhook payloads the way Stripe does, so the backend needs
+the same secret. The public-submission endpoint is rate limited per IP, and
+the whole suite shares one, so the limit must be raised or the later tests
+will be refused:
+
+```bash
+cd backend/testimonial
+STRIPE_WEBHOOK_SECRET=whsec_e2e_test_secret \
+SUBMISSION_RATE_LIMIT_CAPACITY=100000 \
+SUBMISSION_RATE_LIMIT_REFILL_SECONDS=1 \
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+No Stripe account is needed. The webhook endpoint verifies the signature
+itself, and the event types the tests use carry everything the application
+needs in the payload, so nothing calls out to Stripe.
+
 ## Project layout
 
 ```

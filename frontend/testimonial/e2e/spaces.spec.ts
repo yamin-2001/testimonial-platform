@@ -82,6 +82,12 @@ async function fillWizard(
   page: import("@playwright/test").Page,
   { title, slug }: { title: string; slug?: string },
 ) {
+  // The wait matters here. The wizard's fields are controlled by React, so a
+  // value filled before hydration never reaches React's state: the form is
+  // then submitted empty and the wizard simply stays on its last step. The
+  // wait is cheap, and without it the suite fails intermittently under load.
+  await hydrated(page);
+
   await page.getByLabel("Title", { exact: true }).fill(title);
   if (slug) {
     await page.getByLabel("Public URL").fill(slug);
