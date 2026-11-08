@@ -59,7 +59,12 @@ export function LoginForm() {
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      {/*
+        `method="post"` keeps a submit that happens before React hydrates from
+        falling back to a GET, which would put the password in the URL (and
+        so in the browser history and the server logs).
+      */}
+      <form onSubmit={onSubmit} method="post" className="space-y-4">
         <FormField
           label="Email"
           name="email"

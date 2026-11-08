@@ -63,7 +63,7 @@ export function ForgotPasswordForm() {
         </p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} method="post" className="space-y-4">
         <FormField
           label="Email"
           name="email"

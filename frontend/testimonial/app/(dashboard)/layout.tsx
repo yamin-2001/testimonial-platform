@@ -22,10 +22,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <DashboardNav user={user} />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">{children}</div>
-      </main>
+      <DashboardNav user={user}>
+        <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-5xl">{children}</div>
+        </main>
+      </DashboardNav>
     </div>
   );
 }
