@@ -19,15 +19,10 @@
     "next": "16.4.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-hook-form": "^7.91.0",
-    "@hookform/resolvers": "^7.0.2",
-    "zod": "^4.6.7",
     "recharts": "^3.10.1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.7.0",
-    "class-variance-authority": "^0.7.1",
-    "lucide-react": "^1.68.0",
-    "@stripe/stripe-js": "^10.2.1"
+    "class-variance-authority": "^0.7.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

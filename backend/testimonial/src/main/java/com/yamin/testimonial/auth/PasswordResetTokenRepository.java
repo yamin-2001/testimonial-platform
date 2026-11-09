@@ -31,4 +31,17 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
 			where t.id = :id and t.usedAt is null and t.expiresAt > :now
 			""")
 	int consume(@Param("id") UUID id, @Param("now") Instant now);
+
+	/**
+	 * Removes the tokens that can no longer be redeemed.
+	 *
+	 * <p>A token that has passed its expiry is dead whether it was used or
+	 * not, and a used token cannot be redeemed again either. Without this the
+	 * table grows by one row per password reset requested, forever.
+	 *
+	 * @return how many rows were removed
+	 */
+	@Modifying
+	@Query("delete from PasswordResetToken t where t.expiresAt < :now")
+	int deleteExpired(@Param("now") Instant now);
 }

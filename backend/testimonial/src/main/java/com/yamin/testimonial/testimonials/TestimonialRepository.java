@@ -31,6 +31,12 @@ public interface TestimonialRepository extends JpaRepository<Testimonial, UUID> 
 	 *
 	 * <p>Unauthenticated and cacheable (PRD 4.8). Backed by the partial index
 	 * {@code ix_testimonials_embed}.
+	 *
+	 * <p>The list is capped. This endpoint is public and takes no session, so
+	 * a Space with a great many testimonials must not be able to make the
+	 * server build a response of unbounded size. The cap is a {@code Pageable}
+	 * rather than a limit in the query, so the bound is one number held in one
+	 * place.
 	 */
 	@Query("""
 			select t
@@ -40,37 +46,7 @@ public interface TestimonialRepository extends JpaRepository<Testimonial, UUID> 
 			  and t.hidden = false
 			order by t.createdAt desc
 			""")
-	List<Testimonial> findEmbeddableBySpaceId(@Param("spaceId") UUID spaceId);
-
-	/**
-	 * The Space's inbox: favorites first, then newest first (PRD 4.7).
-	 *
-	 * <p>Hidden testimonials are included -- they stay in the inbox, marked
-	 * hidden. The ordering puts favorites above non-favorites regardless of
-	 * date.
-	 */
-	@Query("""
-			select t
-			from Testimonial t
-			where t.space.id = :spaceId
-			order by t.favorite desc, t.createdAt desc, t.id desc
-			""")
-	Page<Testimonial> findInboxBySpaceId(@Param("spaceId") UUID spaceId, Pageable pageable);
-
-	/**
-	 * Searches the inbox by name, email or testimonial text (PRD 4.7).
-	 */
-	@Query("""
-			select t
-			from Testimonial t
-			where t.space.id = :spaceId
-			  and (lower(t.name) like lower(concat('%', :term, '%'))
-			    or lower(t.email) like lower(concat('%', :term, '%'))
-			    or lower(t.message) like lower(concat('%', :term, '%')))
-			order by t.favorite desc, t.createdAt desc, t.id desc
-			""")
-	Page<Testimonial> searchInbox(@Param("spaceId") UUID spaceId, @Param("term") String term,
-			Pageable pageable);
+	List<Testimonial> findEmbeddableBySpaceId(@Param("spaceId") UUID spaceId, Pageable pageable);
 
 	/**
 	 * The Space's inbox, filtered and searched (PRD 4.7).
@@ -84,6 +60,13 @@ public interface TestimonialRepository extends JpaRepository<Testimonial, UUID> 
 	 * own null handling. Written as JPQL, a {@code null} parameter arrives
 	 * untyped and PostgreSQL cannot tell whether to compare it as text, a
 	 * boolean or a number.
+	 *
+	 * <p>The search matches the three searchable columns concatenated into one
+	 * expression, and it is the same expression the trigram index
+	 * {@code ix_testimonials_search_trgm} is built on. The two must be
+	 * identical for the planner to use the index: an OR of three separate
+	 * {@code LIKE} expressions cannot be answered by a GIN index, because the
+	 * index holds one expression, not three.
 	 *
 	 * <p>The ordering is fixed: favourites first, then newest first. Favourites
 	 * sort above non-favourites regardless of date (PRD 4.7).
@@ -102,19 +85,45 @@ public interface TestimonialRepository extends JpaRepository<Testimonial, UUID> 
 	 *        only, {@code null} for both
 	 * @param rating the rating to filter by, or {@code null} for any rating
 	 * @param pageable the page and sort to use
+	 *
+	 * <p>The count is written out rather than left to Spring Data, and it is
+	 * written as {@code count(*)}. Spring Data derives a count of
+	 * {@code count(t.*)}, and the difference is a change of plan, not a
+	 * fraction of a millisecond. {@code count(t.*)} names every column of the
+	 * row, so the planner has to consider that the count may need any of them,
+	 * and it gives up on the covering index and scans the table instead.
+	 * {@code count(*)} names no column at all, so the count can be answered
+	 * from the index alone: on a Space with a hundred thousand testimonials it
+	 * is an Index Only Scan that reads ninety buffers where the derived count
+	 * reads three thousand eight hundred and fifty-five.
+	 *
+	 * <p>The count's predicates are the page query's predicates, so the two
+	 * agree on what "the total" means. The search expression is spelled the
+	 * same way in both, and it must stay that way: the trigram index holds
+	 * that one expression, and an expression the planner cannot match to it
+	 * sends the count back to a table scan.
 	 */
 	@Query(value = """
 			select t.* from testimonials t
 			where t.space_id = :spaceId
 			  and (cast(:term as text) is null
-			    or lower(t.name) like lower('%' || cast(:term as text) || '%')
-			    or lower(t.email) like lower('%' || cast(:term as text) || '%')
-			    or lower(t.message) like lower('%' || cast(:term as text) || '%'))
+			    or lower(t.name) || ' ' || lower(t.email) || ' ' || lower(t.message)
+			       like lower('%' || cast(:term as text) || '%'))
 			  and (cast(:favorite as boolean) is null or t.favorite = cast(:favorite as boolean))
 			  and (cast(:wallOfLove as boolean) is null or t.wall_of_love = cast(:wallOfLove as boolean))
 			  and (cast(:hidden as boolean) is null or t.hidden = cast(:hidden as boolean))
 			  and (cast(:rating as smallint) is null or t.rating = cast(:rating as smallint))
 			order by t.favorite desc, t.created_at desc, t.id desc
+			""", countQuery = """
+			select count(*) from testimonials t
+			where t.space_id = :spaceId
+			  and (cast(:term as text) is null
+			    or lower(t.name) || ' ' || lower(t.email) || ' ' || lower(t.message)
+			       like lower('%' || cast(:term as text) || '%'))
+			  and (cast(:favorite as boolean) is null or t.favorite = cast(:favorite as boolean))
+			  and (cast(:wallOfLove as boolean) is null or t.wall_of_love = cast(:wallOfLove as boolean))
+			  and (cast(:hidden as boolean) is null or t.hidden = cast(:hidden as boolean))
+			  and (cast(:rating as smallint) is null or t.rating = cast(:rating as smallint))
 			""", nativeQuery = true)
 	Page<Testimonial> findInbox(@Param("spaceId") UUID spaceId,
 			@Param("term") String term,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { InboxEditForm } from "@/components/inbox-edit-form";
 import { InboxRowActions } from "@/components/inbox-row-actions";
@@ -103,18 +103,36 @@ export function Inbox({ space, spaces }: { space: Space; spaces: Space[] }) {
    * depends on the flags: a favourite sorts above the others, and the
    * backend owns that order (PRD 4.7).
    */
-  function onChanged() {
+  const onChanged = useCallback(() => {
     load();
-  }
+  }, [load]);
 
   /**
    * Takes a testimonial out of the list after it was deleted.
    */
-  function onDeleted() {
+  const onDeleted = useCallback(() => {
     setEditing(null);
     // The list is reloaded so that the count and the pages stay right.
     load();
-  }
+  }, [load]);
+
+  /**
+   * Opens the edit form for one testimonial.
+   *
+   * The row's own id is passed in rather than captured in a closure made
+   * here, so that the callback keeps the same identity across renders.
+   * A row only re-renders when something about it actually changed.
+   */
+  const onEdit = useCallback((id: string) => {
+    setEditing(id);
+  }, []);
+
+  /**
+   * Closes whichever edit form is open.
+   */
+  const onCancelEdit = useCallback(() => {
+    setEditing(null);
+  }, []);
 
   const testimonials = page?.content ?? [];
 
@@ -268,8 +286,8 @@ export function Inbox({ space, spaces }: { space: Space; spaces: Space[] }) {
                 testimonial={testimonial}
                 readOnly={space.readOnly}
                 editing={editing === testimonial.id}
-                onEdit={() => setEditing(testimonial.id)}
-                onCancelEdit={() => setEditing(null)}
+                onEdit={onEdit}
+                onCancelEdit={onCancelEdit}
                 onChanged={onChanged}
                 onDeleted={onDeleted}
               />
@@ -314,8 +332,13 @@ export function Inbox({ space, spaces }: { space: Space; spaces: Space[] }) {
 
 /**
  * One testimonial in the inbox.
+ *
+ * Memoised, because the list can hold twenty of these and a change to one of
+ * them -- a filter, a search, a single flag -- would otherwise re-render all
+ * twenty. The callbacks it takes keep the same identity from render to
+ * render, which is what lets the memoisation pay off.
  */
-function InboxRow({
+const InboxRow = memo(function InboxRow({
   spaceId,
   testimonial,
   readOnly,
@@ -329,7 +352,8 @@ function InboxRow({
   testimonial: Testimonial;
   readOnly: boolean;
   editing: boolean;
-  onEdit: () => void;
+  /** Opens the edit form for a testimonial, given its id. */
+  onEdit: (id: string) => void;
   onCancelEdit: () => void;
   onChanged: () => void;
   onDeleted: () => void;
@@ -405,14 +429,14 @@ function InboxRow({
             testimonial={testimonial}
             readOnly={readOnly}
             onChange={onChanged}
-            onEdit={onEdit}
+            onEdit={() => onEdit(testimonial.id)}
             onDeleted={onDeleted}
           />
         </div>
       )}
     </article>
   );
-}
+});
 
 /**
  * One filter checkbox.

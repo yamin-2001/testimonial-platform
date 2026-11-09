@@ -36,10 +36,16 @@ export function AnalyticsPanel({
 
   const latestRequest = useRef(0);
 
+  // Whether the numbers on screen are the ones for the range that was asked
+  // for. This is a plain boolean rather than the range itself, because the
+  // range comes out of the object the fetch below writes to -- depending on
+  // that object would make the effect depend on its own output.
+  const settled = analytics?.range === days;
+
   useEffect(() => {
     // The first render already has the default range's data, so there is
     // nothing to fetch until the range changes.
-    if (analytics?.range === days) {
+    if (settled) {
       return;
     }
 
@@ -63,7 +69,7 @@ export function AnalyticsPanel({
             : "The numbers could not be loaded. Please try again.",
         );
       });
-  }, [days, analytics?.range]);
+  }, [days, settled]);
 
   if (!analytics) {
     return (
@@ -79,8 +85,6 @@ export function AnalyticsPanel({
 
   // The range on screen is the one that was asked for only once the fetch
   // for it has landed; until then the previous range's data is still shown.
-  const settled = analytics.range === days;
-
   return (
     <div className="space-y-8">
       <section aria-labelledby="chart-heading">

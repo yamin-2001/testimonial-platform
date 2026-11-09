@@ -23,16 +23,23 @@ export default async function EmbedConfigPage({
 }) {
   const { spaceId } = await params;
 
-  const [space, configuration, summary, content] = await Promise.all([
+  // The origin is resolved before the fan-out, so the requests below do not
+  // each have to wait for it.
+  const origin = await scriptOrigin();
+
+  const [space, configuration, summary] = await Promise.all([
     apiFetchWithSession<Space>(`/api/spaces/${spaceId}`),
     apiFetchWithSession<EmbedConfiguration>(`/api/spaces/${spaceId}/embed`),
     apiFetchWithSession<DashboardSummary>("/api/spaces/dashboard/summary"),
-    fetchPublicContent(spaceId),
   ]);
 
   if (!space || !configuration) {
     notFound();
   }
+
+  // The public content is read once the Space is known, because it needs the
+  // Space's slug. The Space is not fetched again here.
+  const content = await fetchPublicContent(space, origin);
 
   return (
     <div className="space-y-8">
@@ -60,7 +67,7 @@ export default async function EmbedConfigPage({
       <EmbedConfigurator
         spaceId={space.id}
         slug={space.slug}
-        scriptOrigin={await scriptOrigin()}
+        scriptOrigin={origin}
         configuration={configuration}
         premium={summary?.premium ?? false}
         initialContent={content}
@@ -72,20 +79,19 @@ export default async function EmbedConfigPage({
 /**
  * The live content the embed shows.
  *
+ * The Space is passed in rather than fetched again: the page has already read
+ * it, and reading it twice would ask the backend for the same thing twice.
+ *
  * A Space with no testimonials on the Wall of Love yet has no content to
  * show, which is not an error.
  */
 async function fetchPublicContent(
-  spaceId: string,
+  space: Space,
+  origin: string,
 ): Promise<EmbedContent | null> {
-  const space = await apiFetchWithSession<Space>(`/api/spaces/${spaceId}`);
-  if (!space) {
-    return null;
-  }
-
   try {
     const response = await fetch(
-      `${await scriptOrigin()}/api/public/embed/${encodeURIComponent(space.slug)}`,
+      `${origin}/api/public/embed/${encodeURIComponent(space.slug)}`,
     );
     if (!response.ok) {
       return null;

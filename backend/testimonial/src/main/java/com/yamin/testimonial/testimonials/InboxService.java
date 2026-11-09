@@ -6,7 +6,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +41,16 @@ public class InboxService {
 
 	/** The longest an email may be. */
 	private static final int EMAIL_MAX_LENGTH = 255;
+
+	/**
+	 * The most testimonials one unbounded read may return.
+	 *
+	 * <p>A Space's whole inbox can be very large, and reading all of it at
+	 * once makes the database sort the whole set -- a sort that spills to disk
+	 * once it outgrows the server's work memory. A bound keeps the read
+	 * within what the server can sort in memory.
+	 */
+	public static final int LIST_ALL_LIMIT = 1_000;
 
 	private final TestimonialRepository testimonialRepository;
 
@@ -206,13 +218,18 @@ public class InboxService {
 	 *
 	 * <p>Used where a whole Space's testimonials are needed rather than one
 	 * page of them.
+	 *
+	 * <p>The read is bounded. Asking the database for every row of a Space
+	 * makes it sort the whole set, and a sort that outgrows the server's work
+	 * memory spills to disk, which is far slower than the read itself
+	 * warranted. The bound keeps the sort in memory.
 	 */
 	@Transactional(readOnly = true)
 	public List<Testimonial> listAll(UUID ownerId, UUID spaceId) {
 		assertOwner(ownerId, spaceId);
 
 		return testimonialRepository.findInbox(spaceId, null, null, null, null, null,
-				Pageable.unpaged()).getContent();
+				PageRequest.of(0, LIST_ALL_LIMIT, Sort.unsorted())).getContent();
 	}
 
 	/**

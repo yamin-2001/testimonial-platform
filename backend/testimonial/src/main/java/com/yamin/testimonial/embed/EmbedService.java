@@ -10,6 +10,8 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +49,18 @@ import com.yamin.testimonial.testimonials.TestimonialRepository;
 public class EmbedService {
 
 	private static final Logger log = LoggerFactory.getLogger(EmbedService.class);
+
+	/**
+	 * The most testimonials one embed shows.
+	 *
+	 * <p>The embed is public and takes no session, so the number of
+	 * testimonials it can ask for has to be bounded: a Space with tens of
+	 * thousands on its Wall of Love must not be able to make the server
+	 * build a response of unbounded size for an anonymous caller.
+	 *
+	 * <p>The bound is generous enough that a normal Space never reaches it.
+	 */
+	public static final int EMBED_LIMIT = 100;
 
 	private final SpaceRepository spaceRepository;
 
@@ -184,7 +198,8 @@ public class EmbedService {
 				.orElseThrow(() -> new NotFoundException("Space not found"));
 
 		List<Testimonial> testimonials =
-				testimonialRepository.findEmbeddableBySpaceId(space.getId());
+				testimonialRepository.findEmbeddableBySpaceId(space.getId(),
+						PageRequest.of(0, EMBED_LIMIT, Sort.unsorted()));
 
 		Set<String> published = publishedFields(space.getPublicProfileFields());
 

@@ -404,6 +404,22 @@ class EmbedServiceTest extends PostgresTestContainer {
 		});
 	}
 
+	@Test
+	@DisplayName("the embed is capped, so one Space cannot make it return everything")
+	void theEmbedIsCapped() {
+		Space space = spaceService.create(owner.getId(), "Acme Reviews", null, null, null, false,
+				null);
+
+		// More than the cap, all of them on the Wall of Love and visible.
+		for (int i = 0; i < EmbedService.EMBED_LIMIT + 5; i++) {
+			testimonial(space, "Name " + i, "Message " + i, true, false);
+		}
+
+		EmbedContent content = embedService.contentBySlug(space.getSlug());
+
+		assertThat(content.testimonials()).hasSize(EmbedService.EMBED_LIMIT);
+	}
+
 	/**
 	 * A testimonial in a Space.
 	 */
